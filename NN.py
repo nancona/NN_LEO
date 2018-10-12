@@ -8,8 +8,8 @@ import pandas as pd
 input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
 input_file = input_file.values
 
-training_epochs = 10000
-display_step = 100
+training_epochs = 100
+display_step = 1000
 batch_size = 128
 input_dim = 24
 output_dim = 18
@@ -31,10 +31,13 @@ next_position_test = []
 next_velocity_test = []
 
 # neural network parameters
-n_hidden_1 = 200
-n_hidden_2 = 200
-learning_rate = 0.0001
-keep_prob = 0.8 # dropout probability
+n_hidden_1 = 40
+n_hidden_2 = 100
+learning_rate = 0.001
+keep_prob = 1.0  # dropout probability
+
+# save and restore ops
+
 
 # Defining train input/output e test input/output
 for i in range(sample_size):
@@ -73,27 +76,35 @@ train_output = np.hstack([next_position_train, next_velocity_train])
 test_input = np.hstack([position_test, velocity_test, action_test])
 test_output = np.hstack([next_position_test, next_velocity_test])
 
-
+# Comment/uncomment in order to define the multilayer net (1. one layer, 2. two layer)
+# still in design --- smaller networks seem to perform better
 def net(x, weights, biases, keep_prob):
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
     layer_1 = tf.nn.relu(layer_1)
     layer_1 = tf.nn.dropout(layer_1, keep_prob)
-    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-    layer_2 = tf.nn.relu(layer_2)
-    layer_2 = tf.nn.dropout(layer_2, keep_prob)
-    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+    out_layer = tf.matmul(layer_1, weights['out']) + biases['out']
     return out_layer
+
+# def net(x, weights, biases, keep_prob):
+#     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+#     layer_1 = tf.nn.relu(layer_1)
+#     layer_1 = tf.nn.dropout(layer_1, keep_prob)
+#     layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+#     layer_2 = tf.nn.relu(layer_2)
+#     layer_2 = tf.nn.dropout(layer_2, keep_prob)
+#     out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+#     return out_layer
 
 
 weights = {
     'h1': tf.Variable(tf.random_normal([input_dim, n_hidden_1])),
-    'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-    'out': tf.Variable(tf.random_normal([n_hidden_2, output_dim]))
+    # 'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
+    'out': tf.Variable(tf.random_normal([n_hidden_1, output_dim]))
 }
 
 biases = {
     'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-    'b2': tf.Variable(tf.random_normal([n_hidden_2])),
+    # 'b2': tf.Variable(tf.random_normal([n_hidden_2])),
     'out': tf.Variable(tf.random_normal([output_dim]))
 }
 
@@ -128,6 +139,16 @@ with tf.Session() as sess:
 
     print "Optimization Finished!"
 
-    correct_prediction = tf.equal(tf.argmax(nn, 1), tf.argmax(output, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-    print("Accuracy:", accuracy.eval({input: test_input, output: test_output, keep_prob: 1.0}))
+    # saving model
+    tf.train.Saver().save(sess, "./model.ckpt")
+
+with tf.Session() as sess:
+    ckpt = tf.train.get_checkpoint_state('./model')
+    tf.train.Saver().restore(sess, ckpt.model_checkpoint_path)
+    #feed_dict = {input: test_input}
+    predictions = sess.run([test_input])
+
+    # correct_prediction = tf.equal(tf.argmax(nn, 1), tf.argmax(output, 1))
+    # # print sess.run(nn, feed_dict={input: test_input})
+    # accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+    # print("Accuracy:", accuracy.eval({input: test_input, output: test_output, keep_prob: 1.0}))
