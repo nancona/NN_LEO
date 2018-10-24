@@ -26,8 +26,8 @@ input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
 input_file = input_file.values
 
 training_epochs = 10000
-display_step = 500
-batch_size = 200
+display_step = 100
+batch_size = 128
 input_dim = 24
 output_dim = 18
 train_size = 0.8  # useless at the moment
@@ -51,8 +51,8 @@ next_velocity_test = []
 n_hidden_1 = 200
 n_hidden_2 = 200
 n_hidden_3 = 200
-learning_rate = 0.001
-Keep_prob = 0.8  # dropout probability
+learning_rate = 0.0001
+Keep_prob = 1.0  # dropout probability
 
 # save and restore ops
 
@@ -93,6 +93,12 @@ train_output = np.hstack([next_position_train, next_velocity_train])
 # Test samples vector
 test_input = np.hstack([position_test, velocity_test, action_test])
 test_output = np.hstack([next_position_test, next_velocity_test])
+
+# mixing data
+permutation = np.random.permutation(train_input.shape[0])
+train_input = train_input[permutation]
+train_output = train_output[permutation]
+
 
 # ax.plot(time, prediction[0:100, 2], 'b--', label='prediction')
 # Comment/uncomment in order to define the multilayer net (1. one layer, 2. two layer)
@@ -157,8 +163,7 @@ output = tf.placeholder("float", [None, output_dim])
 nn = net(x=input, keep_prob=keep_prob)
 # nn = net(x=input, weights=weights, biases=biases, keep_prob=keep_prob)
 
-cost = tf.losses.mean_squared_error(labels=output, predictions=nn)
-# cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=output, logits=nn))
+cost = tf.reduce_mean(tf.losses.mean_squared_error(labels=output, predictions=nn))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 with tf.Session() as sess:
