@@ -26,7 +26,7 @@ win.add(vbox)
 input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
 input_file = input_file.values
 
-training_epochs = 100
+training_epochs = 10000
 display_step = 100
 batch_size = 64
 input_dim = 24
@@ -53,10 +53,12 @@ n_hidden_1 = 200
 n_hidden_2 = 200
 n_hidden_3 = 200
 learning_rate = 0.0001
-Keep_prob = 1.0  # dropout probability
+Keep_prob = 0.8  # dropout probability
 
-# save and restore ops
-
+# save and restore model
+# change the name if settings are different
+# name meening ===> model_{#epochs}_{keep_prob}
+model_name = './model_%sk_%s.ckpt' % (int(training_epochs/1000), int(Keep_prob*100))
 
 # Defining train input/output e test input/output
 for i in range(sample_size):
@@ -183,7 +185,7 @@ with tf.Session() as sess:
     print("Accuracy:", accuracy.eval({input: test_input, output: test_output, keep_prob: 1.0}))
 
     # saving model
-    tf.train.Saver().save(sess, "./model.ckpt")
+    tf.train.Saver().save(sess, model_name)
 
     # test_input_pred = tf.convert_to_tensor(test_input)
     prediction = nn.eval({input: test_input, keep_prob: 1})
@@ -195,8 +197,8 @@ with tf.Session() as sess:
     sample_plot = np.arange(0, 100, 1)
     time = sample_plot * time_sample
 
-    np.savetxt('PREDICTION', prediction, delimiter='\t')
-    np.savetxt('TEST_DATASET', test_output, delimiter='\t')
+    np.savetxt('prediction.txt', prediction, delimiter='\t')
+    np.savetxt('test_dataset.txt', test_output, delimiter='\t')
 
     # rc('text', usetex=True)
     # plt.figure(num=1, figsize=(5, 4), dpi=100)
@@ -224,7 +226,7 @@ with tf.Session() as sess:
     vbox.pack_start(toolbar, False, False, 0)
 
 
-    #RMSE
+    # RMSE
 
     for i in range(0, 18):
         rmse = sqrt(mean_squared_error(test_output[:, i], prediction[:, i]))
@@ -233,38 +235,14 @@ with tf.Session() as sess:
     win.show_all()
     Gtk.main()
 
-with tf.Session() as sess:
-    tf.train.Saver().restore(sess, "./model.ckpt")
-    prediction = nn.eval({input: test_input, keep_prob: 1})
-    # plot predictions
-    time_sample = 0.03
-    sample_plot = np.arange(0, 100, 1)
-    time = sample_plot * time_sample
-
-    np.savetxt('PREDICTION_PROVARESTORE', prediction, delimiter='\t')
-    np.savetxt('TEST_DATASET_PROVARESTORE', test_output, delimiter='\t')
-
-    fig = plt.figure(figsize=(5, 4), dpi=100)
-    ax = fig.add_subplot(111)
-    ax.plot(time, test_output[0:100, 2], 'g', label='validation')
-    ax.plot(time, prediction[0:100, 2], 'b--', label='prediction')
-    ax.set_title('plot_title')
-    ax.set_xlabel('time [s]')
-    ax.set_ylabel('position [m]')
-    ax.legend()
-
-    canvas = FigureCanvas(fig)  # a Gtk.DrawingArea
-    vbox.pack_start(canvas, True, True, 0)
-    toolbar = NavigationToolbar(canvas, win)
-    vbox.pack_start(toolbar, False, False, 0)
-
-    #RMSE
-
-    for i in range(0, 18):
-        rmse = sqrt(mean_squared_error(test_output[:, i], prediction[:, i]))
-        print "RMSE", '%04d' % (i), rmse
-
-    win.show_all()
-    Gtk.main()
-
-
+# ==============================================
+# Restore session
+# ==============================================
+# with tf.Session() as sess:
+#     tf.train.Saver().restore(sess, model_name)
+#     prediction = nn.eval({input: test_input, keep_prob: 1})
+#
+#     # RMSE restore to check if it works!
+#     for i in range(0, 18):
+#         rmse = sqrt(mean_squared_error(test_output[:, i], prediction[:, i]))
+#         print "RMSE", '%04d' % (i), rmse
