@@ -7,7 +7,8 @@ import pandas as pd
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-
+from matplotlib import pyplot as plt
+from matplotlib import rc
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_gtk3agg import FigureCanvas
 from matplotlib.backends.backend_gtk3 import (
@@ -25,9 +26,9 @@ win.add(vbox)
 input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
 input_file = input_file.values
 
-training_epochs = 10000
+training_epochs = 100
 display_step = 100
-batch_size = 128
+batch_size = 64
 input_dim = 24
 output_dim = 18
 train_size = 0.8  # useless at the moment
@@ -66,7 +67,7 @@ for i in range(sample_size):
         next_position_train = input_file[i][29:38]
         next_velocity_train = input_file[i][38:47]
 
-    if i > 0 and i < 7000:
+    if i > 0 and i < 5000:
         position_train = np.vstack([position_train, input_file[i][1:10]])
         velocity_train = np.vstack([velocity_train, input_file[i][10:19]])
         action_train = np.vstack([action_train, input_file[i][50:56]])
@@ -103,58 +104,46 @@ train_output = train_output[permutation]
 # ax.plot(time, prediction[0:100, 2], 'b--', label='prediction')
 # Comment/uncomment in order to define the multilayer net (1. one layer, 2. two layer)
 # still in design --- smaller networks seem to perform better
-# def net(x, keep_prob):
-#     weights = {
-#         'h1': tf.Variable(tf.random_normal([input_dim, n_hidden_1])),
-#         'out': tf.Variable(tf.random_normal([n_hidden_1, output_dim]))
-#     }
-#     biases = {
-#         'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-#         'out': tf.Variable(tf.random_normal([output_dim]))
-#     }
-#     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
-#     layer_1 = tf.nn.relu(layer_1)
-#     layer_1 = tf.nn.dropout(layer_1, keep_prob)
-#     out_layer = tf.matmul(layer_1, weights['out']) + biases['out']
-#     return out_layer
-
 def net(x, keep_prob):
     weights = {
         'h1': tf.Variable(tf.random_normal([input_dim, n_hidden_1])),
-        'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-        'h3': tf.Variable(tf.random_normal([n_hidden_2, n_hidden_3])),
-        'out': tf.Variable(tf.random_normal([n_hidden_3, output_dim]))
+        'out': tf.Variable(tf.random_normal([n_hidden_1, output_dim]))
     }
     biases = {
         'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-        'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-        'b3': tf.Variable(tf.random_normal([n_hidden_3])),
         'out': tf.Variable(tf.random_normal([output_dim]))
     }
     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
     layer_1 = tf.nn.relu(layer_1)
     layer_1 = tf.nn.dropout(layer_1, keep_prob)
-    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-    layer_2 = tf.nn.relu(layer_2)
-    layer_2 = tf.nn.dropout(layer_2, keep_prob)
-    layer_3 = tf.add(tf.matmul(layer_2, weights['h3']), biases['b3'])
-    layer_3 = tf.nn.relu(layer_3)
-    layer_3 = tf.nn.dropout(layer_3, keep_prob)
-    out_layer = tf.add(tf.matmul(layer_3, weights['out']), biases['out'])
+    out_layer = tf.matmul(layer_1, weights['out']) + biases['out']
     return out_layer
 
+# def net(x, keep_prob):
+#     weights = {
+#         'h1': tf.Variable(tf.random_normal([input_dim, n_hidden_1])),
+#         'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
+#         'h3': tf.Variable(tf.random_normal([n_hidden_2, n_hidden_3])),
+#         'out': tf.Variable(tf.random_normal([n_hidden_3, output_dim]))
+#     }
+#     biases = {
+#         'b1': tf.Variable(tf.random_normal([n_hidden_1])),
+#         'b2': tf.Variable(tf.random_normal([n_hidden_2])),
+#         'b3': tf.Variable(tf.random_normal([n_hidden_3])),
+#         'out': tf.Variable(tf.random_normal([output_dim]))
+#     }
+#     layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+#     layer_1 = tf.nn.relu(layer_1)
+#     layer_1 = tf.nn.dropout(layer_1, keep_prob)
+#     layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+#     layer_2 = tf.nn.relu(layer_2)
+#     layer_2 = tf.nn.dropout(layer_2, keep_prob)
+#     layer_3 = tf.add(tf.matmul(layer_2, weights['h3']), biases['b3'])
+#     layer_3 = tf.nn.relu(layer_3)
+#     layer_3 = tf.nn.dropout(layer_3, keep_prob)
+#     out_layer = tf.add(tf.matmul(layer_3, weights['out']), biases['out'])
+#     return out_layer
 
-# weights = {
-#     'h1': tf.Variable(tf.random_normal([input_dim, n_hidden_1])),
-#     # 'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-#     'out': tf.Variable(tf.random_normal([n_hidden_1, output_dim]))
-# }
-#
-# biases = {
-#     'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-#     # 'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-#     'out': tf.Variable(tf.random_normal([output_dim]))
-# }
 
 keep_prob = tf.placeholder("float")
 input = tf.placeholder("float", [None, input_dim])
@@ -188,10 +177,15 @@ with tf.Session() as sess:
 
     print "Optimization Finished!"
 
+    # evaluation of the model (still not clear)
+    correct_prediction = tf.equal(tf.argmax(nn, 1), tf.argmax(output, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+    print("Accuracy:", accuracy.eval({input: test_input, output: test_output, keep_prob: 1.0}))
+
     # saving model
     tf.train.Saver().save(sess, "./model.ckpt")
 
-    test_input_pred = tf.convert_to_tensor(test_input)
+    # test_input_pred = tf.convert_to_tensor(test_input)
     prediction = nn.eval({input: test_input, keep_prob: 1})
     # print prediction
     # print test_output
@@ -201,38 +195,76 @@ with tf.Session() as sess:
     sample_plot = np.arange(0, 100, 1)
     time = sample_plot * time_sample
 
-    fig = Figure(figsize=(5, 4), dpi=100)
+    np.savetxt('PREDICTION', prediction, delimiter='\t')
+    np.savetxt('TEST_DATASET', test_output, delimiter='\t')
+
+    # rc('text', usetex=True)
+    # plt.figure(num=1, figsize=(5, 4), dpi=100)
+    # plt.plot(time, prediction[0:100, 12], label='prediction')
+    # plt.plot(time, test_output[0:100, 12], label='validation')
+    # plt.title('Left Hip Angular Velocity')
+    # plt.xlabel('time [s]')
+    # plt.ylabel('dotalpha [rad*$s^-1$]')
+    # plt.legend(loc='upper left')
+    #
+    # plt.show()
+
+    fig = plt.figure(figsize=(5, 4), dpi=100)
     ax = fig.add_subplot(111)
     ax.plot(time, test_output[0:100, 2], 'g', label='validation')
     ax.plot(time, prediction[0:100, 2], 'b--', label='prediction')
+    ax.set_title('plot_title')
+    ax.set_xlabel('time [s]')
+    ax.set_ylabel('position [m]')
     ax.legend()
-
-    #RMSE
-    rms = sqrt(mean_squared_error(test_output[:, 2], prediction[:, 2]))
-    print "RMSE:", rms
 
     canvas = FigureCanvas(fig)  # a Gtk.DrawingArea
     vbox.pack_start(canvas, True, True, 0)
     toolbar = NavigationToolbar(canvas, win)
     vbox.pack_start(toolbar, False, False, 0)
 
+
+    #RMSE
+
+    for i in range(0, 18):
+        rmse = sqrt(mean_squared_error(test_output[:, i], prediction[:, i]))
+        print "RMSE", '%04d' % (i), rmse
+
     win.show_all()
     Gtk.main()
-    # plt.plot(time, test_output[:,2],'g', time, prediction[:,2], 'b--')
-    # plt.show()
 
-    # # print sess.run(nn, feed_dict={input: test_input})
+with tf.Session() as sess:
+    tf.train.Saver().restore(sess, "./model.ckpt")
+    prediction = nn.eval({input: test_input, keep_prob: 1})
+    # plot predictions
+    time_sample = 0.03
+    sample_plot = np.arange(0, 100, 1)
+    time = sample_plot * time_sample
 
-    # evaluation of the model (still not clear)
-    correct_prediction = tf.equal(tf.argmax(nn, 1), tf.argmax(output, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-    print("Accuracy:", accuracy.eval({input: test_input, output: test_output, keep_prob: 1.0}))
+    np.savetxt('PREDICTION_PROVARESTORE', prediction, delimiter='\t')
+    np.savetxt('TEST_DATASET_PROVARESTORE', test_output, delimiter='\t')
 
+    fig = plt.figure(figsize=(5, 4), dpi=100)
+    ax = fig.add_subplot(111)
+    ax.plot(time, test_output[0:100, 2], 'g', label='validation')
+    ax.plot(time, prediction[0:100, 2], 'b--', label='prediction')
+    ax.set_title('plot_title')
+    ax.set_xlabel('time [s]')
+    ax.set_ylabel('position [m]')
+    ax.legend()
 
-# with tf.Session() as sess:
-#     ckpt = tf.train.get_checkpoint_state('./model')
-#     tf.train.Saver().restore(sess, ckpt.model_checkpoint)
-#     #feed_dict = {input: test_input}
-#     predictions = sess.run([test_input])
+    canvas = FigureCanvas(fig)  # a Gtk.DrawingArea
+    vbox.pack_start(canvas, True, True, 0)
+    toolbar = NavigationToolbar(canvas, win)
+    vbox.pack_start(toolbar, False, False, 0)
+
+    #RMSE
+
+    for i in range(0, 18):
+        rmse = sqrt(mean_squared_error(test_output[:, i], prediction[:, i]))
+        print "RMSE", '%04d' % (i), rmse
+
+    win.show_all()
+    Gtk.main()
 
 
