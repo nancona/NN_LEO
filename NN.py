@@ -3,13 +3,13 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 import pandas as pd
+import os
+import datetime
 
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from matplotlib import pyplot as plt
-from matplotlib import rc
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_gtk3agg import FigureCanvas
 from matplotlib.backends.backend_gtk3 import (
     NavigationToolbar2GTK3 as NavigationToolbar)
@@ -26,7 +26,7 @@ win.add(vbox)
 input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
 input_file = input_file.values
 
-training_epochs = 10000
+training_epochs = 100
 display_step = 100
 batch_size = 64
 input_dim = 24
@@ -58,8 +58,18 @@ Keep_prob = 0.8  # dropout probability
 # save and restore model
 # change the name if settings are different
 # name meening ===> model_{#epochs}_{keep_prob}
-model_name = './model_%sk_%s.ckpt' % (int(training_epochs/1000), int(Keep_prob*100))
+model_name = 'model_%sk_%s.ckpt' % (int(training_epochs/1000), int(Keep_prob*100))
+settings_folder = './results_model_nn/%sk_%s' % (int(training_epochs/1000), int(Keep_prob*100))
+now = datetime.datetime.now()
+date_folder = '%s_%s_%s_%s_%s' % (now.day, now.month, now.year, now.hour, now.minute)
+model_path = "model_restore"
+results_folder = os.path.join(settings_folder, date_folder)
+model_folder = os.path.join(settings_folder, date_folder, model_path)
 
+if not os.path.exists(settings_folder):
+    os.makedirs(settings_folder)
+os.makedirs(results_folder)
+os.makedirs(model_folder)
 # Defining train input/output e test input/output
 for i in range(sample_size):
     if i == 0:
@@ -184,8 +194,10 @@ with tf.Session() as sess:
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     print("Accuracy:", accuracy.eval({input: test_input, output: test_output, keep_prob: 1.0}))
 
+
     # saving model
-    tf.train.Saver().save(sess, model_name)
+    model_folder = os.path.join(model_folder, model_name)
+    tf.train.Saver().save(sess, model_folder)
 
     # test_input_pred = tf.convert_to_tensor(test_input)
     prediction = nn.eval({input: test_input, keep_prob: 1})
@@ -197,8 +209,10 @@ with tf.Session() as sess:
     sample_plot = np.arange(0, 100, 1)
     time = sample_plot * time_sample
 
-    np.savetxt('prediction.txt', prediction, delimiter='\t')
-    np.savetxt('test_dataset.txt', test_output, delimiter='\t')
+    prediction_path = os.path.join(results_folder, "prediction.txt")
+    validation_path = os.path.join(results_folder, "test_dataset.txt")
+    np.savetxt(prediction_path, prediction, delimiter='\t')
+    np.savetxt(validation_path, test_output, delimiter='\t')
 
     # rc('text', usetex=True)
     # plt.figure(num=1, figsize=(5, 4), dpi=100)
@@ -225,12 +239,13 @@ with tf.Session() as sess:
     toolbar = NavigationToolbar(canvas, win)
     vbox.pack_start(toolbar, False, False, 0)
 
-
+    rmse = np.zeros(18)
     # RMSE
-
-    for i in range(0, 18):
-        rmse = sqrt(mean_squared_error(test_output[:, i], prediction[:, i]))
-        print "RMSE", '%04d' % (i), rmse
+    for k in range(0, 18):
+        rmse[k] = sqrt(mean_squared_error(test_output[:, k], prediction[:, k]))
+        print "RMSE", '%04d' % (k), rmse[k]
+    rmse_path = os.path.join(results_folder, "rmse.txt")
+    np.savetxt(rmse_path, rmse, delimiter='\n')
 
     win.show_all()
     Gtk.main()
