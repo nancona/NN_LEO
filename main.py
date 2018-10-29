@@ -15,6 +15,7 @@ import models
 from ReplayBuffer import ReplayBuffer
 from actorNetwork import Actor
 from criticNetwork import Critic
+import restore_model
 from net import net
 
 # ==========================
@@ -58,9 +59,7 @@ OU_SIGMA = 0.2
 INPUT_DIM = 24
 OUTPUT_DIM = 18
 KEEP_PROB = 1.0
-keep_prob = tf.placeholder("float")
-input = tf.placeholder("float", [None, INPUT_DIM])
-output = tf.placeholder("float", [None, OUTPUT_DIM])
+model_path = '/home/nancona/PycharmProjects/NN_LEO/results_model_nn/20k_100/29_10_2018_10_7/model_restore/model_20k_100.ckpt'
 # Test flag
 TEST = False
 
@@ -300,14 +299,14 @@ def train(sess, actor, critic, nn, test, train_flag=False):
 
 
 def main():
+    keep_prob = tf.placeholder("float")
+    input = tf.placeholder("float", [None, INPUT_DIM])
+    output = tf.placeholder("float", [None, OUTPUT_DIM])
     nn = net(x=input, keep_prob=keep_prob)
-    with tf.Session() as sess2:
-        tf.train.Saver().restore(sess2,
-            '/home/nancona/PycharmProjects/NN_LEO/results_model_nn/20k_100/29_10_2018_10_7/model_restore/model_20k_100.ckpt')
-        with tf.Session() as sess:
-            actor = Actor(sess, STATE_DIMS, ACTION_DIMENSION, 1, ACTOR_LEARNING_RATE, TAU)
-            critic = Critic(sess, STATE_DIMS, ACTION_DIMENSION, CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
-            train(sess, actor, critic, nn, test=True)
+    with tf.Session() as sess:
+        actor = Actor(sess, STATE_DIMS, ACTION_DIMENSION, 1, ACTOR_LEARNING_RATE, TAU)
+        critic = Critic(sess, STATE_DIMS, ACTION_DIMENSION, CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
+        train(sess, actor, critic, nn, test=True)
 
 
 if __name__ == "__main__":
