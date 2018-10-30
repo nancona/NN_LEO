@@ -211,7 +211,7 @@ def train(sess, actor, critic, nn, test, train_flag=False):
             s0 = s2
             a = compute_action(actor, s0, noise)
             model_input = np.hstack([s0, a])
-            s2 = nn.eval({input: model_input, keep_prob: 1})
+            #s2 = nn.eval({input: model_input, keep_prob: 1})
             # # ======================================
             # # COMPUTING ACIONS S2, TERMINAL, REWARD.
             # # ======================================
@@ -232,7 +232,7 @@ def train(sess, actor, critic, nn, test, train_flag=False):
 
             r = models.calc_reward(s2, s0)
             # print phase, s.current_state()
-            terminal = models.calc_terminal()
+            terminal = models.calc_terminal(s2)
 
             # s2_buffer = [s2[0], s2[3], s2[4], s2[5], s2[6]]
             if not TEST:
@@ -302,7 +302,7 @@ def main():
     keep_prob = tf.placeholder("float")
     input = tf.placeholder("float", [None, INPUT_DIM])
     output = tf.placeholder("float", [None, OUTPUT_DIM])
-    nn = net(x=input, keep_prob=keep_prob)
+    nn = restore_model.load_model(True)
     with tf.Session() as sess:
         actor = Actor(sess, STATE_DIMS, ACTION_DIMENSION, 1, ACTOR_LEARNING_RATE, TAU)
         critic = Critic(sess, STATE_DIMS, ACTION_DIMENSION, CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
