@@ -8,15 +8,15 @@ Created on July 2018
 
 import tensorflow as tf
 import numpy as np
-import math
 import csv
 import os.path
 import models
 from ReplayBuffer import ReplayBuffer
+import pandas as pd
+import net
 from actorNetwork import Actor
 from criticNetwork import Critic
-import restore_model
-from net import net
+
 
 # ==========================
 #   Training Parameters
@@ -173,13 +173,13 @@ def write_csv_animation_test(time, s0):
         csvfile6.write(line + '\n')
 
 
-def train(sess, actor, critic, nn, test, train_flag=False):
+def train(sess_2, actor, critic, mod, test, train_flag=False):
     t = 0  # test counter
 
     time = 0
     step = 0.03
 
-    sess.run(tf.global_variables_initializer())
+    sess_2.run(tf.global_variables_initializer())
 
     # initialize actor, critic and replay buffer, and initial state
     actor.update_target_network()
@@ -210,31 +210,12 @@ def train(sess, actor, critic, nn, test, train_flag=False):
         for j in range(MAX_EPISODE_LENGTH):
             s0 = s2
             a = compute_action(actor, s0, noise)
-            model_input = np.hstack([s0, a])
-            #s2 = nn.eval({input: model_input, keep_prob: 1})
-            # # ======================================
-            # # COMPUTING ACIONS S2, TERMINAL, REWARD.
-            # # ======================================
-            # # checking if single or double support phase
-            # # computing first actuated variable
-            # # computing hip and knee difference
-            # delta_left_hip = s_av[0] - s0[3]
-            # delta_right_hip = s_av[1] - s0[4]
-            # delta_left_knee = s_av[2] - s0[5]
-            # delta_right_knee = s_av[3] - s0[6]
-            # # then computing torso
-            # s_trs = s.next_ta(s0, delta_left_hip, delta_right_hip, eng)
-            # # computing torso difference
-            # delta_torso = 0  # s_trs - s0[2]
-            # # and non-actuated variables
-            # x = s.computes_noactuated_variables(s0, delta_torso, delta_left_hip, delta_right_hip, delta_left_knee,
-            #                                 delta_right_knee, eng, phase)
-
+            model_input = tf.convert_to_tensor(np.hstack([s0, a]))
+            s2 = mod.prediction(measured_input=model_input)
             r = models.calc_reward(s2, s0)
             # print phase, s.current_state()
             terminal = models.calc_terminal(s2)
 
-            # s2_buffer = [s2[0], s2[3], s2[4], s2[5], s2[6]]
             if not TEST:
                 replay_buffer.add(np.reshape(s0, (actor.s_dim,)), np.reshape(a, actor.a_dim), r,
                                   terminal, np.reshape(s2, (actor.s_dim,)))
@@ -299,14 +280,76 @@ def train(sess, actor, critic, nn, test, train_flag=False):
 
 
 def main():
-    keep_prob = tf.placeholder("float")
-    input = tf.placeholder("float", [None, INPUT_DIM])
-    output = tf.placeholder("float", [None, OUTPUT_DIM])
-    nn = restore_model.load_model(True)
-    with tf.Session() as sess:
-        actor = Actor(sess, STATE_DIMS, ACTION_DIMENSION, 1, ACTOR_LEARNING_RATE, TAU)
-        critic = Critic(sess, STATE_DIMS, ACTION_DIMENSION, CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
-        train(sess, actor, critic, nn, test=True)
+
+    sample_size = 8000
+
+    # Sample vector initialization
+    position_train = []
+    velocity_train = []
+    action_train = []
+    next_position_train = []
+    next_velocity_train = []
+
+    position_test = []
+    velocity_test = []
+    action_test = []
+    next_position_test = []
+    next_velocity_test = []
+
+    input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
+    input_file = input_file.values
+
+    for i in range(sample_size):
+        if i == 0:
+            position_train = input_file[i][1:10]
+            velocity_train = input_file[i][10:19]
+            action_train = input_file[i][50:56]
+            next_position_train = input_file[i][29:38]
+            next_velocity_train = input_file[i][38:47]
+
+        if i > 0 and i < 5000:
+            position_train = np.vstack([position_train, input_file[i][1:10]])
+            velocity_train = np.vstack([velocity_train, input_file[i][10:19]])
+            action_train = np.vstack([action_train, input_file[i][50:56]])
+            next_position_train = np.vstack([next_position_train, input_file[i][29:38]])
+            next_velocity_train = np.vstack([next_velocity_train, input_file[i][38:47]])
+
+        if i == 7000:
+            position_test = input_file[i][1:10]
+            velocity_test = input_file[i][10:19]
+            action_test = input_file[i][50:56]
+            next_position_test = input_file[i][29:38]
+            next_velocity_test = input_file[i][38:47]
+
+        if i > 7000:
+            position_test = np.vstack([position_test, input_file[i][1:10]])
+            velocity_test = np.vstack([velocity_test, input_file[i][10:19]])
+            action_test = np.vstack([action_test, input_file[i][50:56]])
+            next_position_test = np.vstack([next_position_test, input_file[i][29:38]])
+            next_velocity_test = np.vstack([next_velocity_test, input_file[i][38:47]])
+
+    # Train samples vector
+    train_input = np.hstack([position_train, velocity_train, action_train])
+    train_output = np.hstack([next_position_train, next_velocity_train])
+    # Test samples vector
+    state_input = np.hstack([position_test, velocity_test, action_test])
+    test_output = np.hstack([next_position_test, next_velocity_test])
+
+    # tf.reset_default_graph()
+    g_1 = tf.Graph()
+    with g_1.as_default():
+        sess_1 = tf.Session()
+        mod = net.leo_nn(sess_1)
+        # prediction = model.restore(state_input) # model.eval(measured_input=np.zeros(24))
+        # print prediction
+    g_2 = tf.Graph()
+    with g_2.as_default():
+        sess_2 = tf.Session()
+    # with tf.Session() as sess:
+    #     tf.reset_default_graph()
+        actor = Actor(sess_2, STATE_DIMS, ACTION_DIMENSION, 1, ACTOR_LEARNING_RATE, TAU)
+        critic = Critic(sess_2, STATE_DIMS, ACTION_DIMENSION, CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
+        train(sess_2, actor, critic, mod, test=True)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,7 @@ input_dim = 24
 output_dim = 18
 train_size = 1.0  # useless at the moment
 Keep_prob = 1.0  # dropout probability
+learning_rate = 0.0001
 
 sample_size = 8000
 

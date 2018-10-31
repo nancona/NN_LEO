@@ -10,7 +10,6 @@ import tensorflow as tf
 import tflearn
 import math
 
-
 class Critic(object):
     """
     Input to the network is the state and action, output is Q(s,a).
