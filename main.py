@@ -210,7 +210,7 @@ def train(sess_2, actor, critic, mod, test, train_flag=False):
         for j in range(MAX_EPISODE_LENGTH):
             s0 = s2
             a = compute_action(actor, s0, noise)
-            model_input = tf.convert_to_tensor(np.hstack([s0, a]))
+            model_input = (np.hstack([s0, a])).reshape(1, 24)
             s2 = mod.prediction(measured_input=model_input)
             r = models.calc_reward(s2, s0)
             # print phase, s.current_state()

@@ -71,7 +71,7 @@ train_output = np.hstack([next_position_train, next_velocity_train])
 state_input = np.hstack([position_test, velocity_test, action_test])
 test_output = np.hstack([next_position_test, next_velocity_test])
 
-def load_model(load=True):
+def load_model(state_input):
     # tf.reset_default_graph()
     #
     # keep_prob = tf.placeholder("float")
@@ -84,11 +84,14 @@ def load_model(load=True):
     #     tf.train.Saver().restore(sess,
     #         '/home/nancona/PycharmProjects/NN_LEO/results_model_nn/20k_100/29_10_2018_10_7/model_restore/model_20k_100.ckpt')
 
-    model = leo_nn()
-    prediction = model.restore()
-
-    prediction = model.eval({input: state_input, keep_prob: 1})
-    print prediction
+    tf.reset_default_graph()
+    g_1 = tf.Graph()
+    with g_1.as_default():
+        sess_1 = tf.Session()
+        mod = leo_nn(sess_1)
+        mod.restore()
+        prediction = mod.prediction(measured_input=(state_input[1,:].reshape(1,24)))
+        print prediction
     #     # r
     # sess = tf.Session()
     # # if load:
@@ -98,4 +101,4 @@ def load_model(load=True):
     #         # print tf.get_default_graph().as_graph_def()
     # return nn,sess
 
-# load_model()
+load_model(state_input)
