@@ -12,10 +12,12 @@ import csv
 import os.path
 import models
 from ReplayBuffer import ReplayBuffer
-import pandas as pd
+from models import Models
 import net
 from actorNetwork import Actor
 from criticNetwork import Critic
+import datetime
+
 
 
 # ==========================
@@ -50,16 +52,22 @@ ACTION_BOUND = 1
 ACTION_BOUND_REAL = 8.6
 # Noise Parameters
 NOISE_MEAN = 0
-NOISE_VAR = 1
+NOISE_VAR = 1.0
 # Ornstein-Uhlenbeck variables
-OU_THETA = 0.15
+OU_THETA = 0.30 #0.15
 OU_MU = 0
-OU_SIGMA = 0.2
+OU_SIGMA = 0.40 #0.2
 # Restore Session
 INPUT_DIM = 24
 OUTPUT_DIM = 18
 KEEP_PROB = 1.0
 model_path = '/home/nancona/PycharmProjects/NN_LEO/results_model_nn/20k_100/29_10_2018_10_7/model_restore/model_20k_100.ckpt'
+# RL saving folder
+rl_results_path = '/home/nancona/PycharmProjects/NN_LEO/rl_results'
+now = datetime.datetime.now()
+date_folder = '%s_%s_%s_%s_%s_%s' % (now.day, now.month, now.year, now.hour, now.minute, now.second)
+rl_results_folder = os.path.join(rl_results_path, date_folder)
+os.makedirs(rl_results_folder)
 # Test flag
 TEST = False
 
@@ -83,20 +91,25 @@ def compute_action(actor, s, noise):
 
 def write_csv_learn(episode, steps, s0, a, s2, t, r, tr):
 
-    file_exists = os.path.isfile('learn.csv')
-    file_exists_gen = os.path.isfile('gen_learn.csv')
+    learn_path = os.path.join(rl_results_folder, 'learn.csv')
+    file_exists = os.path.isfile(learn_path)
+    gen_learn_path = os.path.join(rl_results_folder, 'gen_learn.csv')
+    file_exists_gen = os.path.isfile(gen_learn_path)
     a = np.ndarray.tolist(a)
     episode = [episode]
+    s2 = np.ndarray.tolist(s2)
     steps = [steps]
     r = [r]
     terminal = [t]
     tr = [tr]
+    if not type(s0) == list:
+        s0 = np.ndarray.tolist(s0)
 
     x1 = episode + steps + [s2[0]] + tr
     x = s0 + a + s2 + r + terminal + tr
 
     if t:
-        with open('gen_learn.csv', 'a') as csvfile1:
+        with open(gen_learn_path, 'a') as csvfile1:
             headers = ['Episode', 'Steps', 'Falling Position', 'Total Reward']
             wr = csv.writer(csvfile1, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
@@ -105,14 +118,14 @@ def write_csv_learn(episode, steps, s0, a, s2, t, r, tr):
 
             wr.writerow(x1)
 
-    with open('learn.csv', 'a') as csvfile2:
-        headers = ['trsxp', 'trszp', 'trsa', 'lha', 'rha', 'lka', 'rka', 'laa', 'raa', 'a1', 'a2', 'a3', 'a4', 'a5',
-                   'a6', 'trsxp+1', 'trszp+1', 'trsa+1', 'lha+1', 'rha+1', 'lka+1', 'rka+1', 'laa+1', 'raa+1',
-                   'reward', 'terminal', 'tot_reward']
-        # headers = ['trsxp', 'trsyp', 'trsa', 'lha', 'rha', 'lka', 'rka', 'laa', 'raa', 'trsxv', 'trzv', 'trso', 'lho',
-        #           'rho', 'lko', 'rko', 'lao', 'rao', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'trsxp+1', 'trsyp+1',
-        #           'trsa+1', 'lha+1', 'rha+1', 'lka+1', 'rka+1', 'laa+1', 'raa+1', 'trsxv+1', 'trzv+1', 'trso+1',
-        #           'lho+1', 'rho+1', 'lko+1', 'rko+1', 'lao+1', 'rao+1', 'reward', 'terminal', 'tot_reward']
+    with open(learn_path, 'a') as csvfile2:
+        # headers = ['trsxp', 'trszp', 'trsa', 'lha', 'rha', 'lka', 'rka', 'laa', 'raa', 'a1', 'a2', 'a3', 'a4', 'a5',
+        #            'a6', 'trsxp+1', 'trszp+1', 'trsa+1', 'lha+1', 'rha+1', 'lka+1', 'rka+1', 'laa+1', 'raa+1',
+        #            'reward', 'terminal', 'tot_reward']
+        headers = ['trsxp', 'trsyp', 'trsa', 'lha', 'rha', 'lka', 'rka', 'laa', 'raa', 'trsxv', 'trzv', 'trso', 'lho',
+                  'rho', 'lko', 'rko', 'lao', 'rao', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'trsxp+1', 'trsyp+1',
+                  'trsa+1', 'lha+1', 'rha+1', 'lka+1', 'rka+1', 'laa+1', 'raa+1', 'trsxv+1', 'trzv+1', 'trso+1',
+                  'lho+1', 'rho+1', 'lko+1', 'rko+1', 'lao+1', 'rao+1', 'reward', 'terminal', 'tot_reward']
         wr = csv.writer(csvfile2, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
         if not file_exists:
@@ -122,20 +135,25 @@ def write_csv_learn(episode, steps, s0, a, s2, t, r, tr):
 
 
 def write_csv_test(episode, steps, s0, a, s2, t, r, tr):
-    file_exists = os.path.isfile('test.csv')
-    file_exists_gen = os.path.isfile('gen_test.csv')
+    test_path = os.path.join(rl_results_folder, 'test.csv')
+    file_exists = os.path.isfile(test_path)
+    gen_test_path = os.path.join(rl_results_folder, 'gen_test.csv')
+    file_exists_gen = os.path.isfile(gen_test_path)
     a = np.ndarray.tolist(a)
+    s2 = np.ndarray.tolist(s2)
     episode = [episode]
     steps = [steps]
     r = [r]
     terminal = [t]
     tr = [tr]
+    if not type(s0) == list:
+        s0 = np.ndarray.tolist(s0)
 
     x1 = episode + steps + [s2[0]] + tr
     x = s0 + a + s2 + r + terminal + tr
 
     if t:
-        with open('gen_test.csv', 'a') as csvfile3:
+        with open(gen_test_path, 'a') as csvfile3:
             headers = ['Episode', 'Steps', 'Falling Position', 'Total Reward']
             wr = csv.writer(csvfile3, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
@@ -144,7 +162,7 @@ def write_csv_test(episode, steps, s0, a, s2, t, r, tr):
 
             wr.writerow(x1)
 
-    with open('test.csv', 'a') as csvfile4:
+    with open(test_path, 'a') as csvfile4:
         headers = ['trsxp', 'trsyp', 'trsa', 'lha', 'rha', 'lka', 'rka', 'laa', 'raa', 'trsxv', 'trzv', 'trso', 'lho',
                    'rho', 'lko', 'rko', 'lao', 'rao', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'trsxp+1', 'trsyp+1',
                    'trsa+1', 'lha+1', 'rha+1', 'lka+1', 'rka+1', 'laa+1', 'raa+1', 'trsxv+1', 'trzv+1', 'trso+1',
@@ -158,7 +176,8 @@ def write_csv_test(episode, steps, s0, a, s2, t, r, tr):
 
 
 def write_csv_animation_train(time, s0):
-    with open('animation_train.csv', 'a') as csvfile5:
+    animation_train_path = os.path.join(rl_results_folder, 'animation_train.csv')
+    with open(animation_train_path, 'a') as csvfile5:
         time = [time]
         row = time + s0
         line = ', '.join(["%s" % k for k in row])
@@ -166,7 +185,8 @@ def write_csv_animation_train(time, s0):
 
 
 def write_csv_animation_test(time, s0):
-    with open('animation_test.csv', 'a') as csvfile6:
+    animation_test_path = os.path.join(rl_results_folder, 'animation_test.csv')
+    with open(animation_test_path, 'a') as csvfile6:
         time = [time]
         row = time + s0
         line = ', '.join(["%s" % k for k in row])
@@ -187,12 +207,7 @@ def train(sess_2, actor, critic, mod, test, train_flag=False):
     replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
 
     # the initial state has to be change also in the init function below
-    s2 = [0, 0, -0.101485,
-          0.100951, 0.819996, -0.00146549,
-          -1.27, 4.11e-6, 4.11e-6,
-          0, 0, 0,
-          0, 0, 0,
-          0, 0, 0]
+    s = Models()
 
     # print s.current_state()
 
@@ -208,13 +223,14 @@ def train(sess_2, actor, critic, mod, test, train_flag=False):
         total_episode_reward = 0
 
         for j in range(MAX_EPISODE_LENGTH):
-            s0 = s2
+            s0 = s.current_state()
             a = compute_action(actor, s0, noise)
             model_input = (np.hstack([s0, a])).reshape(1, 24)
             s2 = mod.prediction(measured_input=model_input)
-            r = models.calc_reward(s2, s0)
+            s.import_state(s2[0])
+            r = s.calc_reward(s2[0], s0)
             # print phase, s.current_state()
-            terminal = models.calc_terminal(s2)
+            terminal = s.calc_terminal(s2)
 
             if not TEST:
                 replay_buffer.add(np.reshape(s0, (actor.s_dim,)), np.reshape(a, actor.a_dim), r,
@@ -266,17 +282,17 @@ def train(sess_2, actor, critic, mod, test, train_flag=False):
                         time = 0
 
                 if not TEST:
-                    write_csv_learn(i-t, j, s0, a, s2, terminal, r, total_episode_reward)
+                    write_csv_learn(i-t, j, s0, a, s2[0], terminal, r, total_episode_reward)
 
                 else:
-                    write_csv_test(t, j, s0, a, s2, terminal, r, total_episode_reward)
+                    write_csv_test(t, j, s0, a, s2[0], terminal, r, total_episode_reward)
 
             if not terminal == 0:
                 print train_flag, t, i-t, j, total_episode_reward  # printing n of test, n of train, length of the episode,
                                                                  # tot ep reward
                 break
 
-        s2 = models.reset()
+        s.reset()
 
 
 def main():
@@ -340,7 +356,8 @@ def main():
     with g_1.as_default():
         sess_1 = tf.Session(graph=g_1)
         mod = net.leo_nn(sess_1)
-        # prediction = model.restore(state_input) # model.eval(measured_input=np.zeros(24))
+        mod.restore() # model.eval(measured_input=np.zeros(24))
+        # prediction = mod.prediction(state_input)
         # print prediction
     g_2 = tf.Graph()
     with g_2.as_default():

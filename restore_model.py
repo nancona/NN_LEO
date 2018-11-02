@@ -90,7 +90,7 @@ def load_model(state_input):
         sess_1 = tf.Session()
         mod = leo_nn(sess_1)
         mod.restore()
-        prediction = mod.prediction(measured_input=(state_input[1,:].reshape(1,24)))
+        prediction = mod.prediction(measured_input=(state_input[1, :].reshape(1,24)))
         print prediction
     #     # r
     # sess = tf.Session()
