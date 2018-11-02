@@ -281,70 +281,70 @@ def train(sess_2, actor, critic, mod, test, train_flag=False):
 
 def main():
 
-    sample_size = 8000
+    # sample_size = 8000
+    #
+    # # Sample vector initialization
+    # position_train = []
+    # velocity_train = []
+    # action_train = []
+    # next_position_train = []
+    # next_velocity_train = []
+    #
+    # position_test = []
+    # velocity_test = []
+    # action_test = []
+    # next_position_test = []
+    # next_velocity_test = []
+    #
+    # input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
+    # input_file = input_file.values
+    #
+    # for i in range(sample_size):
+    #     if i == 0:
+    #         position_train = input_file[i][1:10]
+    #         velocity_train = input_file[i][10:19]
+    #         action_train = input_file[i][50:56]
+    #         next_position_train = input_file[i][29:38]
+    #         next_velocity_train = input_file[i][38:47]
+    #
+    #     if i > 0 and i < 5000:
+    #         position_train = np.vstack([position_train, input_file[i][1:10]])
+    #         velocity_train = np.vstack([velocity_train, input_file[i][10:19]])
+    #         action_train = np.vstack([action_train, input_file[i][50:56]])
+    #         next_position_train = np.vstack([next_position_train, input_file[i][29:38]])
+    #         next_velocity_train = np.vstack([next_velocity_train, input_file[i][38:47]])
+    #
+    #     if i == 7000:
+    #         position_test = input_file[i][1:10]
+    #         velocity_test = input_file[i][10:19]
+    #         action_test = input_file[i][50:56]
+    #         next_position_test = input_file[i][29:38]
+    #         next_velocity_test = input_file[i][38:47]
+    #
+    #     if i > 7000:
+    #         position_test = np.vstack([position_test, input_file[i][1:10]])
+    #         velocity_test = np.vstack([velocity_test, input_file[i][10:19]])
+    #         action_test = np.vstack([action_test, input_file[i][50:56]])
+    #         next_position_test = np.vstack([next_position_test, input_file[i][29:38]])
+    #         next_velocity_test = np.vstack([next_velocity_test, input_file[i][38:47]])
+    #
+    # # Train samples vector
+    # train_input = np.hstack([position_train, velocity_train, action_train])
+    # train_output = np.hstack([next_position_train, next_velocity_train])
+    # # Test samples vector
+    # state_input = np.hstack([position_test, velocity_test, action_test])
+    # test_output = np.hstack([next_position_test, next_velocity_test])
 
-    # Sample vector initialization
-    position_train = []
-    velocity_train = []
-    action_train = []
-    next_position_train = []
-    next_velocity_train = []
-
-    position_test = []
-    velocity_test = []
-    action_test = []
-    next_position_test = []
-    next_velocity_test = []
-
-    input_file = pd.read_csv("rbdl_leo2606_Animation-learn-0.csv")
-    input_file = input_file.values
-
-    for i in range(sample_size):
-        if i == 0:
-            position_train = input_file[i][1:10]
-            velocity_train = input_file[i][10:19]
-            action_train = input_file[i][50:56]
-            next_position_train = input_file[i][29:38]
-            next_velocity_train = input_file[i][38:47]
-
-        if i > 0 and i < 5000:
-            position_train = np.vstack([position_train, input_file[i][1:10]])
-            velocity_train = np.vstack([velocity_train, input_file[i][10:19]])
-            action_train = np.vstack([action_train, input_file[i][50:56]])
-            next_position_train = np.vstack([next_position_train, input_file[i][29:38]])
-            next_velocity_train = np.vstack([next_velocity_train, input_file[i][38:47]])
-
-        if i == 7000:
-            position_test = input_file[i][1:10]
-            velocity_test = input_file[i][10:19]
-            action_test = input_file[i][50:56]
-            next_position_test = input_file[i][29:38]
-            next_velocity_test = input_file[i][38:47]
-
-        if i > 7000:
-            position_test = np.vstack([position_test, input_file[i][1:10]])
-            velocity_test = np.vstack([velocity_test, input_file[i][10:19]])
-            action_test = np.vstack([action_test, input_file[i][50:56]])
-            next_position_test = np.vstack([next_position_test, input_file[i][29:38]])
-            next_velocity_test = np.vstack([next_velocity_test, input_file[i][38:47]])
-
-    # Train samples vector
-    train_input = np.hstack([position_train, velocity_train, action_train])
-    train_output = np.hstack([next_position_train, next_velocity_train])
-    # Test samples vector
-    state_input = np.hstack([position_test, velocity_test, action_test])
-    test_output = np.hstack([next_position_test, next_velocity_test])
-
-    # tf.reset_default_graph()
+    tf.reset_default_graph()
     g_1 = tf.Graph()
     with g_1.as_default():
-        sess_1 = tf.Session()
+        sess_1 = tf.Session(graph=g_1)
         mod = net.leo_nn(sess_1)
         # prediction = model.restore(state_input) # model.eval(measured_input=np.zeros(24))
         # print prediction
     g_2 = tf.Graph()
     with g_2.as_default():
-        sess_2 = tf.Session()
+        sess_2 = tf.Session(graph=g_2)
     # with tf.Session() as sess:
     #     tf.reset_default_graph()
         actor = Actor(sess_2, STATE_DIMS, ACTION_DIMENSION, 1, ACTOR_LEARNING_RATE, TAU)

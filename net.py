@@ -24,6 +24,7 @@ class leo_nn:
         self.initialize = self.net(x=self.input)
 
 
+
     def net(self, x):
         self.weights = {
             'h1': tf.Variable(tf.random_normal([self.input_dim, self.n_hidden_1])),
@@ -41,9 +42,11 @@ class leo_nn:
         return self.out_layer
 
     def restore(self):
+        saver = tf.train.import_meta_graph(
+            '/home/nicola/PycharmProjects/NN_LEO/results_model_nn/20k_100/29_10_2018_10_7/model_restore/model_20k_100.ckpt.meta', clear_devices=True)
         # with tf.Session() as session:
-        saver = tf.train.Saver()
-        saver.restore(self.sess, self.model_path)
+        #saver = tf.train.Saver()
+        saver.restore(self.sess, '/home/nicola/PycharmProjects/NN_LEO/results_model_nn/20k_100/29_10_2018_10_7/model_restore/model_20k_100.ckpt')
 
     def prediction(self, measured_input):
         prediction = self.sess.run(self.initialize, feed_dict={self.input: measured_input})
